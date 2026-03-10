@@ -22,7 +22,7 @@ var validLevels = map[Level]struct{}{
 	LevelFatal: {},
 }
 
-// IsValid reports whether l is a recognised log level.
+// IsValid reports whether l is a recognize log level.
 func (l Level) IsValid() bool {
 	_, ok := validLevels[l]
 	return ok
