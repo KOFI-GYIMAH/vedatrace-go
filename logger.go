@@ -3,7 +3,6 @@ package vedatrace
 import (
 	"context"
 	"fmt"
-	"maps"
 	"time"
 )
 
@@ -51,8 +50,12 @@ func NewDev(service string) *Logger {
 // meta into every log entry it emits.
 func (l *Logger) Child(meta LogMetadata) *Logger {
 	merged := make(LogMetadata, len(l.meta)+len(meta))
-	maps.Copy(merged, l.meta)
-	maps.Copy(merged, meta)
+	for k, v := range l.meta {
+		merged[k] = v
+	}
+	for k, v := range meta {
+		merged[k] = v
+	}
 	return &Logger{cfg: l.cfg, trans: l.trans, bat: l.bat, meta: merged}
 }
 
@@ -103,9 +106,13 @@ func (l *Logger) Stop() {
 // directly (console).
 func (l *Logger) emit(level Level, msg string, errInfo *ErrorInfo, extra ...LogMetadata) {
 	merged := make(LogMetadata, len(l.meta))
-	maps.Copy(merged, l.meta)
+	for k, v := range l.meta {
+		merged[k] = v
+	}
 	for _, m := range extra {
-		maps.Copy(merged, m)
+		for k, v := range m {
+			merged[k] = v
+		}
 	}
 	if len(merged) == 0 {
 		merged = nil

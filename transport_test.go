@@ -36,10 +36,10 @@ func TestHTTPTransport_success(t *testing.T) {
 }
 
 func TestHTTPTransport_retryOn5xx(t *testing.T) {
-	var calls atomic.Int32
+	var calls int32
 	srv := httptest.
 		NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			n := calls.Add(1)
+			n := atomic.AddInt32(&calls, 1)
 			if n < 3 {
 				w.WriteHeader(http.StatusInternalServerError)
 			} else {
@@ -62,8 +62,8 @@ func TestHTTPTransport_retryOn5xx(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success after retries, got %v", err)
 	}
-	if calls.Load() != 3 {
-		t.Errorf("expected 3 calls, got %d", calls.Load())
+	if atomic.LoadInt32(&calls) != 3 {
+		t.Errorf("expected 3 calls, got %d", atomic.LoadInt32(&calls))
 	}
 }
 
