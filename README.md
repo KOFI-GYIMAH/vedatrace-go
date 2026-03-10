@@ -2,7 +2,9 @@
 
 > Official Go SDK for the [VedaTrace](https://vedatrace.dev) logging platform.
 
-Type-safe, lightweight, and developer-friendly structured logging for Go applications — with background batching, automatic retries, field redaction, and middleware for popular frameworks.
+Type-safe, lightweight, and developer-friendly structured logging for Go applications — with background batching, automatic retries, and field redaction.
+
+**Zero external dependencies. Requires Go 1.21+.**
 
 ---
 
@@ -94,45 +96,88 @@ logger.Info("checkout", vedatrace.LogMetadata{
 })
 ```
 
-## Middleware
+## HTTP request logging
 
-### Standard library `net/http`
+The SDK ships no middleware — wire it up directly in a few lines:
+
+### net/http
 
 ```go
-import vnethttp "github.com/KOFI-GYIMAH/vedatrace-go/middleware/nethttp"
+func loggingMiddleware(logger *vedatrace.Logger, next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        rw := &statusWriter{ResponseWriter: w}
+        next.ServeHTTP(rw, r)
+        logger.Info("http request", vedatrace.LogMetadata{
+            "method":     r.Method,
+            "path":       r.URL.Path,
+            "status":     rw.status,
+            "latency_ms": time.Since(start).Milliseconds(),
+        })
+    })
+}
 
-handler := vnethttp.Middleware(logger)(mux)
-http.ListenAndServe(":8080", handler)
+type statusWriter struct {
+    http.ResponseWriter
+    status int
+}
+
+func (sw *statusWriter) WriteHeader(code int) {
+    sw.status = code
+    sw.ResponseWriter.WriteHeader(code)
+}
 ```
 
 ### Gin
 
 ```go
-import vgin "github.com/KOFI-GYIMAH/vedatrace-go/middleware/gin"
-
-r := gin.New()
-r.Use(vgin.Middleware(logger))
+r.Use(func(c *gin.Context) {
+    start := time.Now()
+    c.Next()
+    logger.Info("http request", vedatrace.LogMetadata{
+        "method":     c.Request.Method,
+        "path":       c.FullPath(),
+        "status":     c.Writer.Status(),
+        "latency_ms": time.Since(start).Milliseconds(),
+    })
+})
 ```
 
 ### Echo
 
 ```go
-import vecho "github.com/KOFI-GYIMAH/vedatrace-go/middleware/echo"
-
-e := echo.New()
-e.Use(vecho.Middleware(logger))
+e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+    return func(c echo.Context) error {
+        start := time.Now()
+        err := next(c)
+        logger.Info("http request", vedatrace.LogMetadata{
+            "method":     c.Request().Method,
+            "path":       c.Request().URL.Path,
+            "status":     c.Response().Status,
+            "latency_ms": time.Since(start).Milliseconds(),
+        })
+        return err
+    }
+})
 ```
 
 ### Chi
 
 ```go
-import vchi "github.com/KOFI-GYIMAH/vedatrace-go/middleware/chi"
-
-r := chi.NewRouter()
-r.Use(vchi.Middleware(logger))
+r.Use(func(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        rw := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+        next.ServeHTTP(rw, r)
+        logger.Info("http request", vedatrace.LogMetadata{
+            "method":     r.Method,
+            "path":       r.URL.Path,
+            "status":     rw.Status(),
+            "latency_ms": time.Since(start).Milliseconds(),
+        })
+    })
+})
 ```
-
-Each middleware logs: `method`, `path`, `status`, `latency_ms`, `remote_addr`, `user_agent`.
 
 ## Flushing & shutdown
 

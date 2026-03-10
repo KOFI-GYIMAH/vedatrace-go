@@ -1,9 +1,6 @@
 package vedatrace
 
-import (
-	"maps"
-	"strings"
-)
+import "strings"
 
 // redact applies the RedactFields rules to a copy of meta, replacing matching
 // leaf values with "[REDACTED]". The original map is never mutated.
@@ -36,6 +33,8 @@ func redact(meta LogMetadata, fields []string) LogMetadata {
 // cloneMetadata performs a shallow copy of a LogMetadata map.
 func cloneMetadata(m LogMetadata) LogMetadata {
 	out := make(LogMetadata, len(m))
-	maps.Copy(out, m)
+	for k, v := range m {
+		out[k] = v
+	}
 	return out
 }
