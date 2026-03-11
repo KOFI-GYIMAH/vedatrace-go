@@ -12,8 +12,8 @@ import (
 func TestHTTPTransport_success(t *testing.T) {
 	srv := httptest.
 		NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("Authorization") != "Bearer test-key" {
-				t.Errorf("bad auth header: %s", r.Header.Get("Authorization"))
+			if r.Header.Get("X-API-Key") != "test-key" {
+				t.Errorf("bad X-API-Key header: %s", r.Header.Get("X-API-Key"))
 			}
 			w.WriteHeader(http.StatusOK)
 		}))
