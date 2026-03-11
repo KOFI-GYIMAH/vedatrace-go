@@ -28,8 +28,7 @@ func newHTTPTransport(cfg Config) *httpTransport {
 }
 
 func (t *httpTransport) Send(ctx context.Context, entries []LogEntry) error {
-	payload := IngestPayload{Logs: entries}
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(entries)
 	if err != nil {
 		return fmt.Errorf("vedatrace: marshal payload: %w", err)
 	}
@@ -51,7 +50,7 @@ func (t *httpTransport) Send(ctx context.Context, entries []LogEntry) error {
 			return fmt.Errorf("vedatrace: build request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+t.cfg.APIKey)
+		req.Header.Set("X-API-Key", t.cfg.APIKey)
 
 		resp, err := t.client.Do(req)
 		if err != nil {
